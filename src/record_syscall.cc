@@ -4008,6 +4008,10 @@ static Switchable rec_prepare_syscall_arch(RecordTask* t,
       syscall_state.reg_parameter<typename Arch::timespec>(4);
       return ALLOW_SWITCH;
 
+    case Arch::clock_nanosleep_time64:
+      syscall_state.reg_parameter<typename Arch::Arch64::timespec>(4);
+      return ALLOW_SWITCH;
+
     case Arch::sched_yield:
       t->session().scheduler().schedule_one_round_robin(t);
       return ALLOW_SWITCH;
@@ -4315,6 +4319,7 @@ static void rec_prepare_restart_syscall_arch(RecordTask* t,
   switch (syscallno) {
     case Arch::nanosleep:
     case Arch::clock_nanosleep:
+    case Arch::clock_nanosleep_time64:
       /* Hopefully uniquely among syscalls, nanosleep()/clock_nanosleep()
        * requires writing to its remaining-time outparam
        * *only if* the syscall fails with -EINTR.  When a

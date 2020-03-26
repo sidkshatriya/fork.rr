@@ -722,6 +722,7 @@ set(BASIC_TESTS
   clock
   clock_adjtime
   clock_nanosleep
+  clock_time64
   clone
   clone_bad_stack
   clone_bad_tls
