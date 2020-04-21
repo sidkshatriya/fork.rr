@@ -1039,6 +1039,7 @@ set(BASIC_TESTS
   truncate
   tun
   two_signals_with_mask
+  ulimit_low
   uname
   unjoined_thread
   unshare
