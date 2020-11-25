@@ -203,7 +203,7 @@ function skip_if_syscall_buf {
 
 function just_record { exe="$1"; exeargs=$2;
     _RR_TRACE_DIR="$workdir" test-monitor $TIMEOUT record.err \
-        rr $GLOBAL_OPTIONS record $LIB_ARG $RECORD_ARGS "$exe" $exeargs 1> record.out 2> record.err
+        rd --extra-compat $GLOBAL_OPTIONS record $LIB_ARG $RECORD_ARGS "$exe" -- $exeargs 1> record.out 2> record.err
 }
 
 function save_exe { exe=$1;
@@ -229,12 +229,12 @@ function record_async_signal { sig=$1; delay_secs=$2; exe=$3; exeargs=$4;
 
 function replay { replayflags=$1
     _RR_TRACE_DIR="$workdir" test-monitor $TIMEOUT replay.err \
-        rr $GLOBAL_OPTIONS replay -a $replayflags 1> replay.out 2> replay.err
+        rd $GLOBAL_OPTIONS --extra-compat replay -a $replayflags 1> replay.out 2> replay.err
 }
 
 function do_ps { psflags=$1
     _RR_TRACE_DIR="$workdir" \
-        rr $GLOBAL_OPTIONS ps $psflags
+        rd $GLOBAL_OPTIONS ps $psflags
 }
 
 #  debug <expect-script-name> [replay-args]
