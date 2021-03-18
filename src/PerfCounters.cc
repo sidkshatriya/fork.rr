@@ -68,6 +68,7 @@ enum CpuMicroarch {
   IntelGoldmont,
   IntelKabylake,
   IntelCometlake,
+  IntelTigerlake,
   AMDF15R30,
   AMDRyzen,
 };
@@ -121,6 +122,7 @@ struct PmuConfig {
 // See Intel 64 and IA32 Architectures Performance Monitoring Events.
 // See check_events from libpfm4.
 static const PmuConfig pmu_configs[] = {
+  { IntelTigerlake, "Intel Tigerlake", 0x5111c4, 0, 0, 100, PMU_TICKS_RCB },
   { IntelCometlake, "Intel Cometlake", 0x5101c4, 0, 0x5301cb, 100, PMU_TICKS_RCB },
   { IntelKabylake, "Intel Kabylake", 0x5101c4, 0, 0x5301cb, 100, PMU_TICKS_RCB },
   { IntelSilvermont, "Intel Silvermont", 0x517ec4, 0, 0x5301cb, 100, PMU_TICKS_RCB },
@@ -220,6 +222,8 @@ static CpuMicroarch get_cpu_microarch() {
       return IntelSilvermont;
     case 0x506f0:
       return IntelGoldmont;
+    case 0x806c0:
+      return IntelTigerlake;
     case 0x806e0:
     case 0x906e0:
       return IntelKabylake;
