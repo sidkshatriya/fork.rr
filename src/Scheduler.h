@@ -153,6 +153,15 @@ public:
 
   void in_stable_exit(RecordTask* t);
 
+  /**
+   * Let the scheduler know that the task has entered an execve.
+   */
+  void did_enter_execve(RecordTask* t);
+  /**
+   * Let the scheduler know that the task has exited an execve.
+   */
+  void did_exit_execve(RecordTask* t);
+
 private:
   // Tasks sorted by priority.
   typedef std::set<std::pair<int, RecordTask*>> TaskPrioritySet;
@@ -229,6 +238,12 @@ private:
 
   cpu_set_t pretend_affinity_mask_;
   int pretend_num_cores_;
+
+  /**
+   * If nonzero, the threadgroup ID of a threadgroup where one of the
+   * threads is currently in an execve.
+   */
+  pid_t in_exec_tgid;
 
   /**
    * When true, context switch at every possible point.

@@ -241,7 +241,15 @@ bool Scheduler::is_task_runnable(RecordTask* t, bool* by_waitpid) {
     }
   }
 
-  if (EV_SYSCALL == t->ev().type() &&
+  if (!t->is_running()) {
+    LOG(debug) << "  was already stopped with status " << t->status();
+    // If we have may_be_blocked, but we aren't running, then somebody noticed
+    // this event earlier and already called did_waitpid for us. Just pretend
+    // we did that here.
+    *by_waitpid = true;
+    must_run_task = t;
+    return true;
+  }  else if (EV_SYSCALL == t->ev().type() &&
       PROCESSING_SYSCALL == t->ev().Syscall().state &&
       treat_syscall_as_nonblocking(t->ev().Syscall().number, t->arch())) {
     // These syscalls never really block but the kernel may report that
@@ -452,8 +460,9 @@ Scheduler::Rescheduled Scheduler::reschedule(Switchable switchable) {
     return result;
   }
 
-  RecordTask* next;
-  while (true) {
+  RecordTask* next = nullptr;
+  // While a threadgroup is in execve, treat all tasks as blocked.
+  while (!in_exec_tgid) {
     maybe_reset_high_priority_only_intervals(now);
     last_reschedule_in_high_priority_only_interval =
         in_high_priority_only_interval(now);
@@ -590,16 +599,25 @@ Scheduler::Rescheduled Scheduler::reschedule(Switchable switchable) {
           // changed its thread ID to be thread-group leader.
           next = session.revive_task_for_exec(tid);
         }
+        if (!next) {
+          LOG(debug) << "    ... but it's dead";
+        }
       }
-      if (!next) {
-        LOG(debug) << "    ... but it's dead";
+      if (next) {
+        ASSERT(next,
+               next->unstable || next->may_be_blocked() ||
+                   status.ptrace_event() == PTRACE_EVENT_EXIT)
+            << "Scheduled task should have been blocked or unstable";
+        next->did_waitpid(status);
+        if (in_exec_tgid && next->tgid() != in_exec_tgid) {
+          // Some threadgroup is doing execve and this task isn't in
+          // that threadgroup. Don't schedule this task until the execve
+          // is complete.
+          LOG(debug) << "  ... but threadgroup " << in_exec_tgid << " is in execve, so ignoring for now";
+          next = nullptr;
+        }
       }
     } while (!next);
-    ASSERT(next,
-           next->unstable || next->may_be_blocked() ||
-               status.ptrace_event() == PTRACE_EVENT_EXIT)
-        << "Scheduled task should have been blocked or unstable";
-    next->did_waitpid(status);
     result.by_waitpid = true;
     must_run_task = next;
   }
@@ -661,6 +679,12 @@ void Scheduler::on_create(RecordTask* t) {
 void Scheduler::on_destroy(RecordTask* t) {
   if (t == current_) {
     current_ = nullptr;
+  }
+  // When the last task in a threadgroup undergoing execve dies,
+  // the execve is over.
+  if (t->tgid() == in_exec_tgid &&
+      t->thread_group()->task_set().size() == 1) {
+    in_exec_tgid = 0;
   }
 
   if (t->in_round_robin_queue) {
@@ -732,6 +756,18 @@ void Scheduler::maybe_pop_round_robin_task(RecordTask* t) {
   task_round_robin_queue.pop_front();
   t->in_round_robin_queue = false;
   task_priority_set.insert(make_pair(t->priority, t));
+}
+
+void Scheduler::did_enter_execve(RecordTask* t) {
+  ASSERT(t, !in_exec_tgid) <<
+    "Entering execve while another execve is already happening in tgid " << in_exec_tgid;
+  in_exec_tgid = t->tgid();
+}
+
+void Scheduler::did_exit_execve(RecordTask* t) {
+  ASSERT(t, in_exec_tgid == t->tgid()) <<
+    "Exiting an execve we didn't know about";
+  in_exec_tgid = 0;
 }
 
 } // namespace rr
