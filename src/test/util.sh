@@ -246,7 +246,7 @@ function do_ps { psflags=$1
 function debug { expectscript=$1; replayargs=$2
     _RR_TRACE_DIR="$workdir" test-monitor $TIMEOUT debug.err \
         python3 $TESTDIR/$expectscript.py \
-        rr $GLOBAL_OPTIONS_RR replay -o-n -x $TESTDIR/test_setup.gdb $replayargs
+        rd $GLOBAL_OPTIONS replay -o-n -x $TESTDIR/test_setup.gdb $replayargs
     if [[ $? == 0 ]]; then
         passed
     else

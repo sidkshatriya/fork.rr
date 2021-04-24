@@ -110,7 +110,7 @@ def set_up():
     try:
         gdb_rr = pexpect.spawn(*get_rr_cmd(), timeout=TIMEOUT_SEC, encoding='utf-8', logfile=open('gdb_rr.log', 'w'))
         gdb_rr.delaybeforesend = 0
-        expect_gdb('\(rr\)')
+        expect_gdb('\(rd\)')
     except Exception as e:
         failed('initializing rr and gdb', e)
 
