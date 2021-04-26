@@ -47,7 +47,7 @@ send_gdb('b *%s'%eip)
 expect_gdb('Breakpoint 2')
 send_gdb('c')
 expect_gdb('Breakpoint 2')
-expect_gdb('(rr)')
+expect_gdb('(rd)')
 
 send_gdb('p/x *(char*)$pc')
 expect_gdb('0x([a-f0-9]+)')

@@ -14,6 +14,6 @@ expect_gdb('Breakpoint 2')
 # gets performed during replay
 for i in range(0,200):
     send_gdb('stepi')
-    expect_gdb('(rr)')
+    expect_gdb('(rd)')
 
 ok()

@@ -5,14 +5,14 @@ send_gdb('break *cpuid_instruction_label')
 expect_gdb('Breakpoint 1')
 send_gdb('c')
 expect_gdb('Breakpoint 1')
-expect_gdb('(rr)')
+expect_gdb('(rd)')
 
 send_gdb('p $pc')
 expect_gdb(re.compile(r'(0x[a-f0-9]+)'))
 pc = eval(last_match().group(1));
-expect_gdb('(rr)')
+expect_gdb('(rd)')
 send_gdb('stepi')
-expect_gdb('(rr)')
+expect_gdb('(rd)')
 
 send_gdb('p $pc')
 expect_gdb(re.compile(r'(0x[a-f0-9]+)'))

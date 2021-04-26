@@ -44,7 +44,7 @@ for sig in range(1,65):
         if gdb_sig == 'SIGINT' or gdb_sig == 'SIGTRAP':
             expect_gdb('used by the debugger')
             send_gdb('y')
-        expect_gdb('(rr)')
+        expect_gdb('(rd)')
         send_gdb('c')
         expect_gdb('received signal %s'%gdb_sig)
 
