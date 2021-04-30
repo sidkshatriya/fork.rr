@@ -17,7 +17,7 @@ for bp in bps:
     send_gdb('b '+ bp +'')
     expect_gdb('Breakpoint \d')
 
-expect_gdb(r'\(rr\)')
+expect_gdb(r'\(rd\)')
 
 hit_bps = { 'A': 0, 'B': 0, 'C': 0 }
 
@@ -26,7 +26,7 @@ events = [ re.compile(r'Breakpoint 1, hit_barrier'),
            re.compile(r'Remote connection closed'),
            re.compile(r'internal-error:'),
            re.compile(r'Cannot find bounds of current function'),
-           re.compile(r'\(rr\)') ]
+           re.compile(r'\(rd\)') ]
 next_cmd = 's'
 while 1:
     send_gdb(next_cmd)
@@ -37,7 +37,7 @@ while 1:
     if 2 == i or 3 == i:
         assert False, 'Program stopped unexpectedly, review gdb_rr.log'
     if 4 == i:
-        expect_gdb(r'\(rr\)')
+        expect_gdb(r'\(rd\)')
         next_cmd = 'stepi'
         continue
     if 5 == i:
@@ -46,7 +46,7 @@ while 1:
     bp = last_match().group(1)
     assert not hit_bps[bp]
     hit_bps[bp] = 1
-    expect_gdb(r'\(rr\)')
+    expect_gdb(r'\(rd\)')
 
 for bp in hit_bps.keys():
     assert hit_bps[bp]
@@ -72,14 +72,14 @@ location_regex = '|'.join(stopped_locations[arch])
 
 send_gdb('info threads')
 expect_gdb(r'1\s+Thread.+hit_barrier')
-expect_gdb(r'\(rr\)')
+expect_gdb(r'\(rd\)')
 
 send_gdb('info threads')
 expect_gdb(r'2\s+Thread.+?(?:%s)' % location_regex)
-expect_gdb(r'\(rr\)')
+expect_gdb(r'\(rd\)')
 
 send_gdb('info threads')
 expect_gdb(r'3\s+Thread.+?(?:%s)' % location_regex)
-expect_gdb(r'\(rr\)')
+expect_gdb(r'\(rd\)')
 
 ok()

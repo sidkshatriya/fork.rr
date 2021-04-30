@@ -35,7 +35,7 @@ for i in range(NUM_THREADS + 1, 1, -1):
     send_gdb('info threads')
     expect_gdb(r'%d\s+Thread[^(]+\(BP-THREAD-[0-9]+\)\s+(?:%s)'%
                (i, '|'.join(stopped_locations[arch])))
-    expect_gdb(r'\(rr\)')
+    expect_gdb(r'\(rd\)')
 
 send_gdb('info threads')
 expect_gdb(r'1\s+Thread[^h]+hit_barrier \(\)')
