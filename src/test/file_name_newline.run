@@ -7,4 +7,4 @@ just_record "foo
 bar"
 replay
 check 'EXIT-SUCCESS'
-(rr --suppress-environment-warnings dump -b -m -p ./latest-trace|grep -q ^bar) || failed "Can't find proper name"
+(rd --suppress-environment-warnings dump -b -m -p ./latest-trace|grep -q ^bar) || failed "Can't find proper name"
