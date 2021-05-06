@@ -16,7 +16,7 @@
 #  compare_test  # or, |debug_test|
 #
 # Test runners may set the environment variable $RECORD_ARGS to pass
-# arguments to rr for recording.  This is only useful for tweaking the
+# arguments to rd for recording.  This is only useful for tweaking the
 # scheduler, don't use it for anything else.
 #
 
@@ -78,7 +78,7 @@ function onexit {
     else
         echo Test $TESTNAME failed, leaving behind $workdir
         echo To replay the failed test, run
-        echo " " _RR_TRACE_DIR="$workdir" rr replay
+        echo " " _RD_TRACE_DIR="$workdir" rd replay
         exit 1
     fi
 }
@@ -92,6 +92,11 @@ function usage {
 }
 
 GLOBAL_OPTIONS="--suppress-environment-warnings --check-cached-mmaps --fatal-errors"
+
+which rd >/dev/null 2>&1
+if [[ "$?" != "0" ]]; then
+    fatal FAILED: rd not found in PATH "($PATH)"
+fi
 
 SRCDIR=`dirname $0`/../..
 SRCDIR=`realpath $SRCDIR`
@@ -138,21 +143,15 @@ nonce=
 # Set up the environment and working directory.
 TESTDIR="${SRCDIR}/src/test"
 
-# Make rr treat temp files as durable. This saves copying all test
+# Make rd treat temp files as durable. This saves copying all test
 # binaries into the trace.
 export RR_TRUST_TEMP_FILES=1
 
 RESOURCE_PATH="$(dirname $(which rd))/.."
 
-# Set options to find rr and resource files in the expected places.
+# Set options to find rd and resource files in the expected places.
 export PATH="${OBJDIR}/bin:${PATH}"
-GLOBAL_OPTIONS_RR="${GLOBAL_OPTIONS} --resource-path=${OBJDIR}"
 GLOBAL_OPTIONS="${GLOBAL_OPTIONS} --resource-path=${RESOURCE_PATH}"
-
-which rr >/dev/null 2>&1
-if [[ "$?" != "0" ]]; then
-    fatal FAILED: rr not found in PATH "($PATH)"
-fi
 
 if [[ ! -d $SRCDIR ]]; then
     fatal FAILED: SRCDIR "($SRCDIR)" not found. objdir and srcdir must share the same parent.
@@ -167,14 +166,14 @@ ulimit -c 0
 
 # NB: must set up the trap handler *before* mktemp
 trap onexit EXIT
-workdir=`mktemp -dt rr-test-$TESTNAME-XXXXXXXXX`
+workdir=`mktemp -dt rd-test-$TESTNAME-XXXXXXXXX`
 cd $workdir
 
 # XXX technically the trailing -XXXXXXXXXX isn't unique, since there
 # could be "foo-123456789" and "bar-123456789", but if that happens,
 # buy me a lottery ticket.
 baseworkdir=$(basename ${workdir})
-nonce=${baseworkdir#rr-test-$TESTNAME-}
+nonce=${baseworkdir#rd-test-$TESTNAME-}
 
 ##--------------------------------------------------
 ## Now we come to the helpers available to test runners.  This is the
@@ -205,7 +204,7 @@ function skip_if_syscall_buf {
 }
 
 function just_record { exe="$1"; exeargs=$2;
-    _RR_TRACE_DIR="$workdir" test-monitor $TIMEOUT record.err \
+    _RD_TRACE_DIR="$workdir" test-monitor $TIMEOUT record.err \
         rd --extra-compat $GLOBAL_OPTIONS record $LIB_ARG $RECORD_ARGS "$exe" -- $exeargs 1> record.out 2> record.err
 }
 
@@ -231,7 +230,7 @@ function record_async_signal { sig=$1; delay_secs=$2; exe=$3; exeargs=$4;
 }
 
 function replay { replayflags=$1
-    _RR_TRACE_DIR="$workdir" test-monitor $TIMEOUT replay.err \
+    _RD_TRACE_DIR="$workdir" test-monitor $TIMEOUT replay.err \
         rd $GLOBAL_OPTIONS --extra-compat replay -a $replayflags 1> replay.out 2> replay.err
 }
 
@@ -252,8 +251,8 @@ function debug { expectscript=$1; replayargs=$2
     else
         failed "debug script failed"
         echo "--------------------------------------------------"
-        echo "gdb_rr.log:"
-        cat gdb_rr.log
+        echo "gdb_rd.log:"
+        cat gdb_rd.log
         echo "--------------------------------------------------"
         echo "debug.err:"
         cat debug.err
