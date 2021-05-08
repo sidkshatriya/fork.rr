@@ -235,7 +235,7 @@ function replay { replayflags=$1
 }
 
 function do_ps { psflags=$1
-    _RR_TRACE_DIR="$workdir" \
+    _RD_TRACE_DIR="$workdir" \
         rd $GLOBAL_OPTIONS ps $psflags
 }
 
@@ -243,7 +243,7 @@ function do_ps { psflags=$1
 #
 # Load the "expect" script to drive replay of the recording of |exe|.
 function debug { expectscript=$1; replayargs=$2
-    _RR_TRACE_DIR="$workdir" test-monitor $TIMEOUT debug.err \
+    _RD_TRACE_DIR="$workdir" test-monitor $TIMEOUT debug.err \
         python3 $TESTDIR/$expectscript.py \
         rd $GLOBAL_OPTIONS replay -o-n -x $TESTDIR/test_setup.gdb $replayargs
     if [[ $? == 0 ]]; then
