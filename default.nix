@@ -1,4 +1,5 @@
 # This default.nix is from https://github.com/NixOS/nixpkgs/blob/dda6f61fd90d6e9dc5e95a13924298ec2a4132a1/pkgs/development/tools/analysis/rr/default.nix
+# For license see https://github.com/NixOS/nixpkgs/blob/dda6f61fd90d6e9dc5e95a13924298ec2a4132a1/COPYING
 { lib, stdenv, fetchFromGitHub, fetchpatch
 , cmake, pkg-config, which, makeWrapper
 , libpfm, zlib, python3Packages, procps, gdb, capnproto
