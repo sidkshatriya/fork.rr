@@ -2169,6 +2169,8 @@ static Switchable prepare_bpf(RecordTask* t,
     case BPF_MAP_UPDATE_ELEM:
     case BPF_MAP_DELETE_ELEM:
     case BPF_BTF_LOAD:
+    case BPF_PROG_DETACH:
+    case BPF_PROG_ATTACH:
       break;
     case BPF_OBJ_GET:
       return ALLOW_SWITCH;
@@ -2192,6 +2194,48 @@ static Switchable prepare_bpf(RecordTask* t,
       BpfMapMonitor* monitor = bpf_map_monitor<Arch>(t, syscall_state, &argsp);
       syscall_state.mem_ptr_parameter(REMOTE_PTR_FIELD(argsp, next_key),
                                       monitor->key_size());
+      break;
+    }
+    case BPF_PROG_QUERY: {
+      auto attr_size = t->regs().arg3();
+      auto attr_begin = syscall_state.reg_parameter(2, attr_size, IN_OUT);
+      auto attr_buf = MemoryRange(attr_begin, attr_size);
+      auto attrp = attr_begin.cast<typename Arch::bpf_attr>();
+
+      // if this assert fails, we should check what fields were added to the
+      // query ABI, update the structure and track pointers to output arrays
+      ASSERT(t, attr_size <= sizeof(((typename Arch::bpf_attr*)nullptr)->query));
+
+      // if the offset of the prog_cnt is out of the buffer,
+      // the syscall will fail and we can't track anything
+      auto prog_cnt_p = REMOTE_PTR_FIELD(attrp, query.prog_cnt);
+      if (!attr_buf.contains(prog_cnt_p)) {
+        break;
+      }
+      auto prog_cnt = t->read_mem(prog_cnt_p);
+      auto buf_size = prog_cnt * sizeof(__u32);
+
+      // for each output array, only track changes if the field is
+      // within the bounds of the user provided buffer
+      auto prog_ids_p = REMOTE_PTR_FIELD(attrp, query.prog_ids);
+      if (attr_buf.contains(prog_ids_p)) {
+        syscall_state.mem_ptr_parameter(prog_ids_p, buf_size);
+      }
+
+      auto prog_attach_flags_p = REMOTE_PTR_FIELD(attrp, query.prog_attach_flags);
+      if (attr_buf.contains(prog_attach_flags_p)) {
+        syscall_state.mem_ptr_parameter(prog_attach_flags_p, buf_size);
+      }
+
+      auto link_ids_p = REMOTE_PTR_FIELD(attrp, query.link_ids);
+      if (attr_buf.contains(link_ids_p)) {
+        syscall_state.mem_ptr_parameter(link_ids_p, buf_size);
+      }
+
+      auto link_attach_flags_p = REMOTE_PTR_FIELD(attrp, query.link_attach_flags);
+      if (attr_buf.contains(link_attach_flags_p)) {
+        syscall_state.mem_ptr_parameter(link_attach_flags_p, buf_size);
+      }
       break;
     }
     default:
@@ -4003,6 +4047,7 @@ static Switchable rec_prepare_syscall_arch(RecordTask* t,
     case Arch::msync:
     case Arch::open:
     case Arch::openat:
+    case Arch::openat2:
     case Arch::semop:
     case Arch::semtimedop_time64:
     case Arch::semtimedop:
@@ -5525,6 +5570,17 @@ static pair<remote_ptr<void>, remote_ptr<void>> get_exe_entry_interp_base(Task* 
  */
 static string try_make_process_file_name(RecordTask* t,
                                          const std::string& file_name) {
+  if (file_name == "/") {
+    // The kernel sometimes returns "/" as the file name of a mapped
+    // segment. (We've seen this when the actual file was a bind-mount
+    // that has been opened with O_PATH and then lazily unmounted, then
+    // the O_PATH fd was execed with `execveat`.)
+    // In that case, we have no idea what the actual file is so
+    // return a name that will never work instead "/proc/.../root/"
+    // which can be stat(), causing confusion.
+    return "";
+  }
+
   char proc_root[32];
   // /proc/<pid>/root has magical properties; not only is it a link, but
   // it links to a view of the filesystem as the process sees it, taking into
@@ -5702,6 +5758,7 @@ static void process_execve(RecordTask* t, TaskSyscallState& syscall_state) {
       continue;
     }
     struct stat st;
+    // Maybe we should use /proc/.../map_files instead?
     string file_name = try_make_process_file_name(t, km.fsname());
     if (stat(file_name.c_str(), &st) != 0) {
       st = km.fake_stat();
@@ -6599,10 +6656,11 @@ static void rec_process_syscall_arch(RecordTask* t,
     }
 
     case Arch::open:
-    case Arch::openat: {
+    case Arch::openat:
+    case Arch::openat2: {
       Registers r = t->regs();
       if (r.syscall_failed()) {
-        uintptr_t path = syscallno == Arch::openat ? r.arg2() : r.orig_arg1();
+        uintptr_t path = syscallno == Arch::open ? r.orig_arg1() : r.arg2();
         string pathname = t->read_c_str(remote_ptr<char>(path));
         if (is_gcrypt_deny_file(pathname.c_str())) {
           fake_gcrypt_file(t, &r);
@@ -6610,7 +6668,20 @@ static void rec_process_syscall_arch(RecordTask* t,
         }
       } else {
         int fd = r.syscall_result_signed();
-        int flags = syscallno == Arch::openat ? r.arg3() : r.arg2();
+
+        int flags;
+        switch (syscallno) {
+        case Arch::open:
+          flags = r.arg2();
+          break;
+        case Arch::openat:
+          flags = r.arg3();
+          break;
+        case Arch::openat2:
+          flags = t->read_mem(remote_ptr<int64_t>(r.arg3()));
+          break;
+        }
+
         string pathname = handle_opened_file(t, fd, flags);
         bool gcrypt = is_gcrypt_deny_file(pathname.c_str());
         if (gcrypt || is_blacklisted_filename(pathname.c_str())) {

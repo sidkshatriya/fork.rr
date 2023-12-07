@@ -65,8 +65,9 @@ static CpuMicroarch compute_cpu_microarch() {
     case 0x506f0:
     case 0x706a0:
     case 0x506c0:
-    case 0x906c0:
       return IntelGoldmont;
+    case 0x906c0:
+      return IntelTremont;
     case 0x706e0:
     case 0x606a0:
       return IntelIcelake;
@@ -85,6 +86,7 @@ static CpuMicroarch compute_cpu_microarch() {
     case 0x906a0:
       return IntelAlderlake;
     case 0xb0670:
+    case 0xb06a0:
       return IntelRaptorlake;
     case 0x806f0:
       return IntelSapphireRapid;

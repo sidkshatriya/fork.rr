@@ -934,6 +934,7 @@ set(BASIC_TESTS
   block_open
   bpf
   bpf_map
+  bpf_query
   brk
   brk2
   capget
@@ -1105,6 +1106,7 @@ set(BASIC_TESTS
   x86/modify_ldt
   mount_ns_exec
   mount_ns_exec2
+  mount_ns_execveat
   mprotect
   mprotect_heterogenous
   mprotect_none
@@ -1134,6 +1136,7 @@ set(BASIC_TESTS
   numa
   x86/old_fork
   orphan_process
+  openat2
   packet_mmap_disable
   x86/patch_syscall_restart
   pause
@@ -1255,6 +1258,7 @@ set(BASIC_TESTS
   sigaltstack
   sigchld_interrupt_signal
   sigcont
+  sigframe_grow_stack
   sighandler_bad_rsp_sigsegv
   sighandler_fork
   sighandler_mask
