@@ -19,6 +19,11 @@
         {
           packages.default = rr;
           packages.rr = rr;
+          packages.rr-no-tests = rr.overrideAttrs (prev: {
+            cmakeFlags = prev.cmakeFlags ++ [
+              "-DBUILD_TESTS=OFF"
+            ];
+          });
         };
     };
 }
